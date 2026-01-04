@@ -2,25 +2,14 @@ import { useState } from "react";
 import KioskLayout from "../components/layout/KioskLayout";
 import VisitorForm from "../components/kiosk/VisitorForm";
 import PhotoCapture from "../components/kiosk/PhotoCapture";
+import BadgePreview from "../components/kiosk/BadgePreview";
 
-/**
- * Kiosk Page
- *
- * Main orchestrator for the visitor check-in flow:
- * 1. Form submission → collects visitor info
- * 2. Photo capture → takes visitor photo for badge
- * 3. Success → confirmation screen
- *
- * Future enhancements:
- * - Connect to backend API
- * - Add routing or wizard pattern
- * - Implement state persistence
- */
 
 export default function Kiosk() {
-  const [step, setStep] = useState("form"); // "form" | "photo" | "success"
+  const [step, setStep] = useState("form"); // "form" | "photo" | "success" | "badge"
   const [visitorData, setVisitorData] = useState(null);
   const [photoData, setPhotoData] = useState(null);
+  const [visitorId, setVisitorId] = useState(null);
 
   // Step 1: Handle form submission
   const handleFormSubmit = (formData) => {
@@ -34,8 +23,32 @@ export default function Kiosk() {
   const handlePhotoCapture = (photoDataURL) => {
     console.log("Photo captured, size:", photoDataURL.length);
     setPhotoData(photoDataURL);
+    
+    // Generate mock visitor ID
+    const timestamp = Date.now().toString().slice(-4);
+    const id = `VIS-${timestamp}`;
+    setVisitorId(id);
+    
     setStep("success");
     // Future: Send photo to backend API here
+  };
+
+  // Handle viewing badge preview
+  const handleViewBadge = () => {
+    setStep("badge");
+  };
+
+  // Handle badge actions (print, download, finish)
+  const handlePrintBadge = (id) => {
+    console.log("Printing badge:", id);
+  };
+
+  const handleDownloadBadge = (id) => {
+    console.log("Downloading badge:", id);
+  };
+
+  const handleFinishCheckIn = () => {
+    handleNewVisitor();
   };
 
   // Handle AI concierge button - placeholder
@@ -49,6 +62,19 @@ export default function Kiosk() {
     setStep("form");
     setVisitorData(null);
     setPhotoData(null);
+    setVisitorId(null);
+  };
+
+  // Helper function to get host name from ID
+  const getHostName = (hostId) => {
+    const hostMap = {
+      "1": "John Smith — Engineering",
+      "2": "Jane Doe — Sales",
+      "3": "Michael Johnson — HR",
+      "4": "Sarah Williams — Management",
+      "5": "Reception — Front Desk",
+    };
+    return hostMap[hostId] || "Selected Host";
   };
 
   return (
@@ -92,17 +118,7 @@ export default function Kiosk() {
                   Visiting:
                 </span>
                 <span className="text-xl text-slate-900 font-bold text-right">
-                  {visitorData.hostToVisit === "1"
-                    ? "John Smith — Engineering"
-                    : visitorData.hostToVisit === "2"
-                    ? "Jane Doe — Sales"
-                    : visitorData.hostToVisit === "3"
-                    ? "Michael Johnson — HR"
-                    : visitorData.hostToVisit === "4"
-                    ? "Sarah Williams — Management"
-                    : visitorData.hostToVisit === "5"
-                    ? "Reception — Front Desk"
-                    : "Selected Host"}
+                  {getHostName(visitorData.hostToVisit)}
                 </span>
               </div>
 
@@ -131,21 +147,43 @@ export default function Kiosk() {
           {/* Next Steps */}
           <div className="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-8">
             <p className="text-2xl text-indigo-900 font-bold mb-2">
-              📋 Your badge has been printed
+              📋 Your badge is ready
             </p>
             <p className="text-lg text-indigo-700">
-              Please proceed to the reception desk to collect your visitor badge.
+              View, print, or download your visitor badge below.
             </p>
           </div>
 
-          {/* New Visitor Button */}
-          <button
-            onClick={handleNewVisitor}
-            className="w-full py-6 px-6 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-900 rounded-3xl font-bold text-xl transition-colors duration-150"
-          >
-            Check In Another Visitor
-          </button>
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={handleViewBadge}
+              className="py-6 px-6 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-3xl font-bold text-xl transition-colors duration-150 shadow-lg"
+            >
+              👁️ View Visitor Badge
+            </button>
+            <button
+              onClick={handleNewVisitor}
+              className="py-6 px-6 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-900 rounded-3xl font-bold text-xl transition-colors duration-150"
+            >
+              ➕ Check In Another Visitor
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Step 4: Badge Preview */}
+      {step === "badge" && visitorData && photoData && visitorId && (
+        <BadgePreview
+          visitorName={visitorData.fullName}
+          company={visitorData.company}
+          hostName={getHostName(visitorData.hostToVisit)}
+          visitorPhoto={photoData}
+          visitorId={visitorId}
+          onPrint={handlePrintBadge}
+          onDownload={handleDownloadBadge}
+          onFinish={handleFinishCheckIn}
+        />
       )}
     </KioskLayout>
   );

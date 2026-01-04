@@ -1,19 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-
-/**
- * PhotoCapture Component
- *
- * Handles visitor photo capture for badge/security identification.
- * Features:
- * - Live camera preview using getUserMedia
- * - Capture photo to canvas
- * - Preview captured photo
- * - Retake option
- * - Fallback image upload if camera unavailable
- * - Image validation (type, size)
- * - Graceful error handling
- */
-
 const PhotoCapture = ({ onPhotoCapture, visitorName }) => {
   // Refs
   const videoRef = useRef(null);
