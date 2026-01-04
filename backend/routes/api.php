@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\EnsureJsonResponse;
+use App\Http\Controllers\Api\CheckInController;
 
 Route::middleware([EnsureJsonResponse::class])->group(function () {
     Route::get('/ping', function () {
@@ -15,4 +16,7 @@ Route::middleware([EnsureJsonResponse::class])->group(function () {
     Route::get('/admin/visitors', function () {
         return [];
     });
+    
+    // Check-in endpoint (minimal, no auth)
+    Route::get('/check-in', [CheckInController::class, '__invoke']);
 });
