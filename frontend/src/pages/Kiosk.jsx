@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import KioskLayout from "../components/layout/KioskLayout";
 import VisitorForm from "../components/kiosk/VisitorForm";
 import PhotoCapture from "../components/kiosk/PhotoCapture";
@@ -10,6 +10,11 @@ export default function Kiosk() {
   const [visitorData, setVisitorData] = useState(null);
   const [photoData, setPhotoData] = useState(null);
   const [visitorId, setVisitorId] = useState(null);
+  // Auto-reset configuration
+  const AUTO_RESET_SECONDS = 12; // configurable countdown duration
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const autoResetRef = useRef(null);
+  const isAutoResetActiveRef = useRef(false);
 
   // Step 1: Handle form submission
   const handleFormSubmit = (formData) => {
@@ -33,6 +38,15 @@ export default function Kiosk() {
     // Future: Send photo to backend API here
   };
 
+  // Centralized reset that clears all kiosk state and timers
+  const resetKiosk = () => {
+    clearAutoReset();
+    setStep("form");
+    setVisitorData(null);
+    setPhotoData(null);
+    setVisitorId(null);
+    setSecondsLeft(0);
+  };
   // Handle viewing badge preview
   const handleViewBadge = () => {
     setStep("badge");
@@ -51,19 +65,70 @@ export default function Kiosk() {
     handleNewVisitor();
   };
 
+  const handleNewVisitor = () => {
+    resetKiosk();
+  };
+
+  // Auto-reset timer controls
+  const startAutoReset = () => {
+    clearAutoReset();
+    setSecondsLeft(AUTO_RESET_SECONDS);
+    isAutoResetActiveRef.current = true;
+    autoResetRef.current = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          // time's up
+          clearAutoReset();
+          resetKiosk();
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const clearAutoReset = () => {
+    if (autoResetRef.current) {
+      clearInterval(autoResetRef.current);
+      autoResetRef.current = null;
+    }
+    isAutoResetActiveRef.current = false;
+    setSecondsLeft(0);
+  };
+
+  // Reset timer when user interacts with the screen on final pages
+  const handleUserInteraction = () => {
+    if (step === "success" || step === "badge") {
+      // give user more time
+      if (isAutoResetActiveRef.current) {
+        setSecondsLeft(AUTO_RESET_SECONDS);
+      } else {
+        startAutoReset();
+      }
+    }
+  };
+
+  // Start auto-reset when entering success or badge steps
+  useEffect(() => {
+    if (step === "success" || step === "badge") {
+      startAutoReset();
+    } else {
+      clearAutoReset();
+    }
+
+    return () => {
+      // cleanup on unmount
+      clearAutoReset();
+    };
+  }, [step]);
+
   // Handle AI concierge button - placeholder
   const handleAskAI = () => {
     console.log("Opening concierge AI assistant");
     // Future: Open AI chat or help panel
   };
 
-  // Reset flow for next visitor
-  const handleNewVisitor = () => {
-    setStep("form");
-    setVisitorData(null);
-    setPhotoData(null);
-    setVisitorId(null);
-  };
+  // Reset flow for next visitor (handled by resetKiosk)
 
   // Helper function to get host name from ID
   const getHostName = (hostId) => {
@@ -94,7 +159,7 @@ export default function Kiosk() {
 
       {/* Step 3: Success Confirmation */}
       {step === "success" && visitorData && photoData && (
-        <div className="space-y-8">
+        <div className="space-y-8" onClick={handleUserInteraction} onTouchStart={handleUserInteraction}>
           {/* Success Header */}
           <div className="text-center space-y-4">
             <div className="inline-block">
@@ -154,6 +219,13 @@ export default function Kiosk() {
             </p>
           </div>
 
+          {/* Auto-reset countdown (non-alarming) */}
+          {secondsLeft > 0 && (
+            <div className="text-center text-sm text-slate-600">
+              This screen will reset automatically in {secondsLeft}s
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
@@ -174,16 +246,23 @@ export default function Kiosk() {
 
       {/* Step 4: Badge Preview */}
       {step === "badge" && visitorData && photoData && visitorId && (
-        <BadgePreview
-          visitorName={visitorData.fullName}
-          company={visitorData.company}
-          hostName={getHostName(visitorData.hostToVisit)}
-          visitorPhoto={photoData}
-          visitorId={visitorId}
-          onPrint={handlePrintBadge}
-          onDownload={handleDownloadBadge}
-          onFinish={handleFinishCheckIn}
-        />
+        <div onClick={handleUserInteraction} onTouchStart={handleUserInteraction} className="space-y-6">
+          {secondsLeft > 0 && (
+            <div className="text-center text-sm text-slate-600">
+              This screen will reset automatically in {secondsLeft}s
+            </div>
+          )}
+          <BadgePreview
+            visitorName={visitorData.fullName}
+            company={visitorData.company}
+            hostName={getHostName(visitorData.hostToVisit)}
+            visitorPhoto={photoData}
+            visitorId={visitorId}
+            onPrint={handlePrintBadge}
+            onDownload={handleDownloadBadge}
+            onFinish={handleFinishCheckIn}
+          />
+        </div>
       )}
     </KioskLayout>
   );
