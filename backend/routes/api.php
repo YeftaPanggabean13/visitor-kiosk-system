@@ -1,13 +1,18 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\EnsureJsonResponse;
 
-Route::get('/ping', function () {
-    return response()->json([
-        'status' => 'ok',
-        'message' => 'API is working',
-    ]);
-Route::middleware('auth:sanctum')->group(function () {
-Route::get('/admin/visitors', fn () => []);
-});
+Route::middleware([EnsureJsonResponse::class])->group(function () {
+    Route::get('/ping', function () {
+        return response()->json([
+            'status' => 'ok',
+            'message' => 'API is working',
+        ]);
+    });
+
+    // Placeholder admin endpoints (no auth for now)
+    Route::get('/admin/visitors', function () {
+        return [];
+    });
 });
