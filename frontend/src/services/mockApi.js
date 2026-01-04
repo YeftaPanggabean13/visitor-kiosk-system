@@ -31,6 +31,35 @@ function makeResponse(success, data = null, message = "") {
  */
 export function createMockApi(config = {}) {
   const cfg = { ...DEFAULT_CONFIG, ...config };
+  
+  // In-memory visitor store to simulate current visitors inside the building
+  const visitors = [];
+
+  // Seed a few visitors for demo purposes
+  (function seed() {
+    const now = Date.now();
+    const sample = [
+      { fullName: 'Alice Nguyen', company: 'Acme Co', hostToVisit: '1', phone: '(555) 111-2222' },
+      { fullName: 'Bob Lee', company: 'Globex', hostToVisit: '2', phone: '(555) 333-4444' },
+      { fullName: 'Carla Diaz', company: 'Innotech', hostToVisit: '3', phone: '(555) 555-6666' },
+    ];
+
+    sample.forEach((p, i) => {
+      const checkInId = `CHK-${(now + i).toString().slice(-6)}`;
+      const visitorId = `VIS-${Math.floor(Math.random() * 9000 + 1000)}`;
+      visitors.push({
+        checkInId,
+        visitorId,
+        name: p.fullName,
+        company: p.company,
+        hostToVisit: p.hostToVisit,
+        phone: p.phone,
+        photoUrl: null,
+        status: 'inside',
+        checkedInAt: new Date(now - i * 60000).toISOString(),
+      });
+    });
+  })();
 
   async function getHosts() {
     await randomDelay(cfg.minDelay, cfg.maxDelay);
@@ -56,6 +85,16 @@ export function createMockApi(config = {}) {
     return makeResponse(true, { photoId: mockPhotoId, url: mockUrl }, "Photo uploaded");
   }
 
+  async function getCurrentVisitors() {
+    await randomDelay(cfg.minDelay, cfg.maxDelay);
+    if (shouldFail(cfg.failureRate)) {
+      return makeResponse(false, null, 'Failed to load current visitors');
+    }
+    // Return visitors currently inside
+    const inside = visitors.filter((v) => v.status === 'inside');
+    return makeResponse(true, inside, 'Current visitors');
+  }
+
   async function postCheckIn(payload) {
     // payload: { fullName, company, phone, hostToVisit, purposeOfVisit, photoId }
     await randomDelay(cfg.minDelay, cfg.maxDelay + 300);
@@ -69,11 +108,20 @@ export function createMockApi(config = {}) {
     const record = {
       checkInId,
       visitorId,
-      receivedAt: new Date().toISOString(),
+      name: payload.fullName,
+      company: payload.company,
+      hostToVisit: payload.hostToVisit,
+      phone: payload.phone,
+      photoUrl: payload.photoUrl || null,
+      status: 'inside',
+      checkedInAt: new Date().toISOString(),
       payload,
     };
 
-    return makeResponse(true, record, "Check-in successful");
+    // Add to in-memory store
+    visitors.push(record);
+
+    return makeResponse(true, record, 'Check-in successful');
   }
 
   async function postCheckOut(payload) {
@@ -83,7 +131,13 @@ export function createMockApi(config = {}) {
       return makeResponse(false, null, "Check-out failed. Please try again.");
     }
 
-    return makeResponse(true, { ...payload, checkedOutAt: new Date().toISOString() }, "Checked out");
+    // Mark visitor as checked out in the in-memory store if present
+    const idx = visitors.findIndex((v) => v.checkInId === payload.checkInId || v.visitorId === payload.visitorId);
+    if (idx !== -1) {
+      visitors[idx] = { ...visitors[idx], status: 'checked_out', checkedOutAt: new Date().toISOString() };
+    }
+
+    return makeResponse(true, { ...payload, checkedOutAt: new Date().toISOString() }, 'Checked out');
   }
 
   return {
@@ -91,6 +145,7 @@ export function createMockApi(config = {}) {
     postUploadPhoto,
     postCheckIn,
     postCheckOut,
+    getCurrentVisitors,
     cfg,
   };
 }
