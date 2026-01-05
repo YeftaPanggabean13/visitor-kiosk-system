@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import mockApi from '../services/mockApi';
+// import api from '@/services/api';
 
 function StatusDot({ status }) {
   const color = status === 'inside' ? 'bg-emerald-500' : 'bg-slate-400';
@@ -23,10 +23,15 @@ export default function SecurityDashboard() {
 
   const fetchVisitors = async () => {
     setLoading(true);
-    const res = await mockApi.getCurrentVisitors();
-    if (res.success) {
-      setVisitors(res.data.sort((a, b) => new Date(b.checkedInAt) - new Date(a.checkedInAt)));
+    const res = await api.get('/visits/active');
+    if (res.data.success) {
+      setVisitors(
+        res.data.data.sort(
+          (a, b) => new Date(b.checked_in_at) - new Date(a.checked_in_at)
+        )
+      );
     }
+
     setLoading(false);
   };
 
@@ -36,16 +41,6 @@ export default function SecurityDashboard() {
 
     // Poll for updates every 5 seconds
     pollingRef.current = setInterval(async () => {
-      // Small chance to simulate a new check-in
-      if (Math.random() < 0.25) {
-        await mockApi.postCheckIn({
-          fullName: ['Dana Park','Evan Kim','Farah Ali'][Math.floor(Math.random()*3)],
-          company: ['Nexus','BlueSky','Quant'][Math.floor(Math.random()*3)],
-          phone: '(555) 000-0000',
-          hostToVisit: String(Math.floor(Math.random()*5) + 1),
-          purposeOfVisit: 'Meeting',
-        });
-      }
       fetchVisitors();
     }, 5000);
 
@@ -53,13 +48,11 @@ export default function SecurityDashboard() {
   }, []);
 
   const handleCheckOut = async (visitor) => {
-    const res = await mockApi.postCheckOut({ checkInId: visitor.checkInId, visitorId: visitor.visitorId });
-    if (res.success) {
-      // refresh
+   const res = await api.post(`/visits/${visitor.id}/check-out`);
+    if (res.data.success) {
       fetchVisitors();
     } else {
-      // show simple alert for demo
-      alert(res.message || 'Failed to check out');
+      alert(res.data.message || 'Failed to check out');
     }
   };
 

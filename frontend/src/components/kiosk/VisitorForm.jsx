@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
-
-// Mock hosts data (replace with API call later )
-const MOCK_HOSTS = [
-  { id: 1, name: "John Smith", department: "Engineering" },
-  { id: 2, name: "Jane Doe", department: "Sales" },
-  { id: 3, name: "Michael Johnson", department: "HR" },
-  { id: 4, name: "Sarah Williams", department: "Management" },
-  { id: 5, name: "Reception", department: "Front Desk" },
-];
+import React, { useState, useEffect } from 'react';
+import { fetchHosts } from '../../services/checkInApi';
 
 const VisitorForm = ({ onSubmit, onAskAI }) => {
+  const [hosts, setHosts] = useState([]);
+  const [hostsLoading, setHostsLoading] = useState(true);
+  const [hostsError, setHostsError] = useState(null);
   // Form state
   const [formData, setFormData] = useState({
     fullName: "",
@@ -24,6 +19,26 @@ const VisitorForm = ({ onSubmit, onAskAI }) => {
   const [touched, setTouched] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
+
+  // Fetch hosts on component mount
+  useEffect(() => {
+    const loadHosts = async () => {
+      try {
+        setHostsLoading(true);
+        const data = await fetchHosts();
+        setHosts(data);
+        setHostsError(null);
+      } catch (error) {
+        console.error('Error loading hosts:', error);
+        setHostsError('Failed to load hosts. Please try again.');
+        setHosts([]);
+      } finally {
+        setHostsLoading(false);
+      }
+    };
+
+    loadHosts();
+  }, []);
 
   // Validation rules
   const validateForm = () => {
@@ -210,19 +225,29 @@ const VisitorForm = ({ onSubmit, onAskAI }) => {
           <label className="text-xs font-bold text-slate-400 uppercase ml-1">
             Whom are you visiting? *
           </label>
+          {hostsError && (
+            <p className="text-red-600 font-semibold text-sm">
+              ⚠ {hostsError}
+            </p>
+          )}
           <select
             name="hostToVisit"
             value={formData.hostToVisit}
             onChange={handleChange}
             onBlur={handleBlur}
+            disabled={hostsLoading || hostsError}
             className={`w-full px-6 py-5 rounded-2xl border-2 bg-white text-lg font-medium transition-colors ${
+              hostsLoading || hostsError ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               errors.hostToVisit && touched.hostToVisit
                 ? "border-red-400 focus:outline-none focus:ring-2 focus:ring-red-300"
                 : "border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
             }`}
           >
-            <option value="">Select an internal contact</option>
-            {MOCK_HOSTS.map((host) => (
+            <option value="">
+              {hostsLoading ? "Loading hosts..." : "Select an internal contact"}
+            </option>
+            {hosts.map((host) => (
               <option key={host.id} value={host.id}>
                 {host.name} — {host.department}
               </option>

@@ -5,11 +5,13 @@ use App\Http\Middleware\EnsureJsonResponse;
 use App\Http\Controllers\Api\CheckInController;
 use App\Http\Controllers\Api\VisitController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\HostController;
 
 
 Route::middleware([EnsureJsonResponse::class])->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/check-in', CheckInController::class);
+    Route::get('/hosts', [HostController::class, 'index']);
 });
 
 Route::middleware(['auth:sanctum', EnsureJsonResponse::class])->group(function () {

@@ -3,6 +3,7 @@ import KioskLayout from "../components/layout/KioskLayout";
 import VisitorForm from "../components/kiosk/VisitorForm";
 import PhotoCapture from "../components/kiosk/PhotoCapture";
 import BadgePreview from "../components/kiosk/BadgePreview";
+import { submitCheckIn, uploadVisitPhoto } from "../services/checkInApi";
 
 
 export default function Kiosk() {
@@ -10,6 +11,9 @@ export default function Kiosk() {
   const [visitorData, setVisitorData] = useState(null);
   const [photoData, setPhotoData] = useState(null);
   const [visitorId, setVisitorId] = useState(null);
+  const [visitId, setVisitId] = useState(null); // Store visit ID from API response
+  const [checkInError, setCheckInError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Auto-reset configuration
   const AUTO_RESET_SECONDS = 12; // configurable countdown duration
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -17,25 +21,76 @@ export default function Kiosk() {
   const isAutoResetActiveRef = useRef(false);
 
   // Step 1: Handle form submission
-  const handleFormSubmit = (formData) => {
+  const handleFormSubmit = async (formData) => {
     console.log("Visitor registration data:", formData);
-    setVisitorData(formData);
-    setStep("photo");
-    // Future: Send to backend API here
+    try {
+      setIsSubmitting(true);
+      setCheckInError(null);
+
+      // Convert form data to API payload
+      const payload = {
+        full_name: formData.fullName,
+        company: formData.company || null,
+        phone: formData.phone,
+        host_id: parseInt(formData.hostToVisit),
+        purpose: formData.purposeOfVisit || null,
+      };
+
+      // Submit check-in to backend
+      const response = await submitCheckIn(payload);
+      
+      // Store the response data for later use
+      setVisitId(response.id); // Visit ID for photo upload
+      setVisitorData(formData);
+      setStep("photo");
+    } catch (error) {
+      console.error("Check-in failed:", error);
+      setCheckInError(error.response?.data?.message || "Check-in failed. Please try again.");
+      setIsSubmitting(false);
+    }
   };
 
   // Step 2: Handle photo capture
-  const handlePhotoCapture = (photoDataURL) => {
+  const handlePhotoCapture = async (photoDataURL) => {
     console.log("Photo captured, size:", photoDataURL.length);
-    setPhotoData(photoDataURL);
     
-    // Generate mock visitor ID
-    const timestamp = Date.now().toString().slice(-4);
-    const id = `VIS-${timestamp}`;
-    setVisitorId(id);
-    
-    setStep("success");
-    // Future: Send photo to backend API here
+    try {
+      setIsSubmitting(true);
+      setCheckInError(null);
+
+      // Convert data URL to File object for upload
+      const dataURLtoFile = (dataurl, filename) => {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], filename, { type: mime });
+      };
+
+      const photoFile = dataURLtoFile(photoDataURL, `photo_${visitId}.jpg`);
+
+      // Upload photo to backend
+      if (visitId) {
+        await uploadVisitPhoto(visitId, photoFile);
+      }
+
+      setPhotoData(photoDataURL);
+      setVisitorId(`VIS-${Date.now().toString().slice(-4)}`);
+      setStep("success");
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error("Photo upload failed:", error);
+      setCheckInError(error.response?.data?.message || "Photo upload failed. Please try again.");
+      setIsSubmitting(false);
+      // Allow user to continue despite photo upload failure
+      setPhotoData(photoDataURL);
+      setVisitorId(`VIS-${Date.now().toString().slice(-4)}`);
+      setStep("success");
+    }
   };
 
   // Centralized reset that clears all kiosk state and timers
@@ -45,6 +100,9 @@ export default function Kiosk() {
     setVisitorData(null);
     setPhotoData(null);
     setVisitorId(null);
+    setVisitId(null);
+    setCheckInError(null);
+    setIsSubmitting(false);
     setSecondsLeft(0);
   };
   // Handle viewing badge preview
@@ -144,6 +202,15 @@ export default function Kiosk() {
 
   return (
     <KioskLayout>
+      {/* Display check-in errors */}
+      {checkInError && (
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
+          <p className="text-red-700 font-semibold">
+            ⚠ {checkInError}
+          </p>
+        </div>
+      )}
+
       {/* Step 1: Visitor Registration Form */}
       {step === "form" && (
         <VisitorForm onSubmit={handleFormSubmit} onAskAI={handleAskAI} />
@@ -154,6 +221,7 @@ export default function Kiosk() {
         <PhotoCapture
           onPhotoCapture={handlePhotoCapture}
           visitorName={visitorData.fullName}
+          isSubmitting={isSubmitting}
         />
       )}
 

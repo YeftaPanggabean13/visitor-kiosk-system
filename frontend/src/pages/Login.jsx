@@ -7,30 +7,14 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!email.trim() || !password) {
-      setError('Please enter your email and password.');
-      return;
-    }
-
-    // Mock login flow
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Mock redirect by role
-      if (role === 'Admin') {
-        window.location.href = '/admin';
-      } else if (role === 'Security') {
-        window.location.href = '/security';
-      } else {
-        window.location.href = '/host';
-      }
-    }, 700);
+ const handleSubmit = async () => {
+    const res = await loginApi({ email, password });
+    auth.login(res.data);
+    
+    if (res.data.user.role === "admin") navigate("/admin");
+    if (res.data.user.role === "security") navigate("/security");
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl w-full bg-white rounded-2xl shadow-lg overflow-hidden grid grid-cols-1 lg:grid-cols-2">
