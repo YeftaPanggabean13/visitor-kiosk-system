@@ -18,5 +18,5 @@ Route::middleware([EnsureJsonResponse::class])->group(function () {
     });
     
     // Check-in endpoint (minimal, no auth)
-    Route::post ('/check-in', [CheckInController::class, '__invoke']);
+    Route::post('/check-in', CheckInController::class);
 });

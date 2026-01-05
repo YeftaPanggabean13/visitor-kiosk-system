@@ -3,20 +3,17 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\EnsureJsonResponse;
 use App\Http\Controllers\Api\CheckInController;
+use App\Http\Controllers\Api\VisitController;
 
 Route::middleware([EnsureJsonResponse::class])->group(function () {
-    Route::get('/ping', function () {
-        return response()->json([
-            'status' => 'ok',
-            'message' => 'API is working',
-        ]);
-    });
-
     // Placeholder admin endpoints (no auth for now)
     Route::get('/admin/visitors', function () {
         return [];
     });
     
     // Check-in endpoint (minimal, no auth)
-    Route::get('/check-in', [CheckInController::class, '__invoke']);
+    Route::post('/check-in', CheckInController::class);
+    
+    // Active visits for security dashboard (read-only, no auth)
+    Route::get('/visits/active', [VisitController::class, 'active']);
 });
