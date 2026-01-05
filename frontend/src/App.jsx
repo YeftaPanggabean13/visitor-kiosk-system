@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { setAuthToken } from "./services/api";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 import Login from "./pages/Login";
 import Admin from "./pages/AdminDashboard";
@@ -22,8 +23,22 @@ function App() {
         <Routes>
           <Route path="/" element={<Kiosk />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/security" element={<Security />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute role="admin">
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
+        <Route
+        path="/security"
+        element={
+          <ProtectedRoute role="security">
+            <Security />
+          </ProtectedRoute>
+          } 
+        />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

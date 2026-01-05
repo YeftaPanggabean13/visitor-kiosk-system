@@ -3,12 +3,14 @@ import KioskLayout from "../components/layout/KioskLayout";
 import VisitorForm from "../components/kiosk/VisitorForm";
 import PhotoCapture from "../components/kiosk/PhotoCapture";
 import BadgePreview from "../components/kiosk/BadgePreview";
-import { submitCheckIn, uploadVisitPhoto } from "../services/checkInApi";
+import { submitCheckIn, uploadVisitPhoto, checkOutVisit} from "../services/checkInApi";
+
 
 
 export default function Kiosk() {
   const [step, setStep] = useState("form"); // "form" | "photo" | "success" | "badge"
   const [visitorData, setVisitorData] = useState(null);
+  const [hosts, setHosts] = useState([]);
   const [photoData, setPhotoData] = useState(null);
   const [visitorId, setVisitorId] = useState(null);
   const [visitId, setVisitId] = useState(null); // Store visit ID from API response
@@ -50,7 +52,25 @@ export default function Kiosk() {
     }
   };
 
-  // Step 2: Handle photo capture
+    const handleCheckOut = async () => {
+    if (!visitId) return;
+
+    try {
+      setIsSubmitting(true);
+      setCheckInError(null);
+
+      await checkOutVisit(visitId);
+
+      alert("Check-out successful!");
+      resetKiosk(); 
+    } catch (error) {
+      console.error("Check-out failed:", error);
+      setCheckInError(error.response?.data?.message || "Check-out failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handlePhotoCapture = async (photoDataURL) => {
     console.log("Photo captured, size:", photoDataURL.length);
     
@@ -72,10 +92,15 @@ export default function Kiosk() {
       };
 
       const photoFile = dataURLtoFile(photoDataURL, `photo_${visitId}.jpg`);
+      console.log("Photo file created:", photoFile.name, "Size:", photoFile.size, "Type:", photoFile.type);
 
       // Upload photo to backend
       if (visitId) {
+        console.log("Uploading photo to visit:", visitId);
         await uploadVisitPhoto(visitId, photoFile);
+        console.log("Photo uploaded successfully");
+      } else {
+        console.warn("No visitId available for photo upload");
       }
 
       setPhotoData(photoDataURL);
@@ -84,6 +109,7 @@ export default function Kiosk() {
       setIsSubmitting(false);
     } catch (error) {
       console.error("Photo upload failed:", error);
+      console.error("Visit ID:", visitId);
       setCheckInError(error.response?.data?.message || "Photo upload failed. Please try again.");
       setIsSubmitting(false);
       // Allow user to continue despite photo upload failure
@@ -189,15 +215,9 @@ export default function Kiosk() {
   // Reset flow for next visitor (handled by resetKiosk)
 
   // Helper function to get host name from ID
-  const getHostName = (hostId) => {
-    const hostMap = {
-      "1": "John Smith — Engineering",
-      "2": "Jane Doe — Sales",
-      "3": "Michael Johnson — HR",
-      "4": "Sarah Williams — Management",
-      "5": "Reception — Front Desk",
-    };
-    return hostMap[hostId] || "Selected Host";
+    const getHostName = (hostId) => {
+    const host = hosts.find(h => h.id === parseInt(hostId));
+    return host ? host.name : "—";
   };
 
   return (
@@ -251,7 +271,7 @@ export default function Kiosk() {
                   Visiting:
                 </span>
                 <span className="text-xl text-slate-900 font-bold text-right">
-                  {getHostName(visitorData.hostToVisit)}
+                  {visitorData && getHostName(visitorData.hostToVisit)}
                 </span>
               </div>
 
@@ -306,7 +326,13 @@ export default function Kiosk() {
               onClick={handleNewVisitor}
               className="py-6 px-6 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-900 rounded-3xl font-bold text-xl transition-colors duration-150"
             >
-              ➕ Check In Another Visitor
+              Check In Another Visitor
+            </button>
+            <button
+              onClick={handleCheckOut}
+              className="py-6 px-6 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-3xl font-bold text-xl transition-colors duration-150 shadow-lg"
+            >
+              Check Out
             </button>
           </div>
         </div>

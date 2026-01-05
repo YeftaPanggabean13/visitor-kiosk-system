@@ -1,8 +1,5 @@
 import api from "./api";
 
-/**
- * Fetch all available hosts from the backend.
- */
 export const fetchHosts = async () => {
   try {
     const response = await api.get("/hosts");
@@ -35,6 +32,8 @@ export const submitCheckIn = async (payload) => {
  */
 export const uploadVisitPhoto = async (visitId, photoFile) => {
   try {
+    console.log("Starting photo upload for visit:", visitId, "File:", photoFile.name, "Size:", photoFile.size);
+    
     const formData = new FormData();
     formData.append("photo", photoFile);
 
@@ -43,9 +42,12 @@ export const uploadVisitPhoto = async (visitId, photoFile) => {
         "Content-Type": "multipart/form-data",
       },
     });
+    
+    console.log("Photo upload successful:", response.data);
     return response.data.data;
   } catch (error) {
     console.error("Photo upload failed:", error);
+    console.error("Error response:", error.response?.data);
     throw error;
   }
 };
@@ -67,7 +69,7 @@ export const fetchActiveVisits = async () => {
  * Check out a visitor.
  * @param {number} visitId - The visit ID
  */
-export const checkOutVisitor = async (visitId) => {
+export const checkOutVisit  = async (visitId) => {
   try {
     const response = await api.post(`/visits/${visitId}/check-out`);
     return response.data.data;

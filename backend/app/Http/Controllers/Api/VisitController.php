@@ -72,7 +72,7 @@ class VisitController extends Controller
     public function uploadPhoto($id, Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'photo' => 'required|image|max:2048', // max 2MB
+            'photo' => 'required|image|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -86,23 +86,24 @@ class VisitController extends Controller
         }
 
         $file = $request->file('photo');
-
         $filename = 'visit_' . $visit->id . '.jpg';
-        $storagePath = 'public/visitors';
+        $directory = 'visitors'; // relative to storage/app/public
 
-        // Store file under storage/app/public/visitors/visit_{id}.jpg
-        $file->storeAs($storagePath, $filename);
+        if (!Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->makeDirectory($directory);
+        }
 
-        $filePath = 'visitors/' . $filename; // relative to storage/app/public
+        Storage::disk('public')->putFileAs($directory, $file, $filename);
 
-        // Create or update Photo record
+        $filePath = $directory . '/' . $filename;
+
         Photo::updateOrCreate(
             ['visit_id' => $visit->id],
             ['file_path' => $filePath]
         );
 
-        $publicUrl = url('storage/' . ltrim($filePath, '/'));
-
-        return $this->success(['photo_url' => $publicUrl], 'Photo uploaded');
+        return $this->success([
+            'photo_url' => url('storage/' . $filePath),
+        ], 'Photo uploaded');
     }
 }
