@@ -13,7 +13,9 @@ Route::middleware([EnsureJsonResponse::class])->group(function () {
 });
 
 Route::middleware(['auth:sanctum', EnsureJsonResponse::class])->group(function () {
+    Route::post('/visits/{id}/photo', [VisitController::class, 'uploadPhoto']);
+});
+Route::middleware(['auth:sanctum', 'role:admin,security'])->group(function () {
     Route::get('/visits/active', [VisitController::class, 'active']);
     Route::post('/visits/{id}/check-out', [VisitController::class, 'checkOut']);
-    Route::post('/visits/{id}/photo', [VisitController::class, 'uploadPhoto']);
 });
