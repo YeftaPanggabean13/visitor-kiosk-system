@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Visit;
+use App\Models\Photo;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class VisitController extends Controller
 {
@@ -64,5 +67,42 @@ class VisitController extends Controller
         ];
 
         return $this->success($data, 'Checked out');
+    }
+
+    public function uploadPhoto($id, Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|max:2048', // max 2MB
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first(), 422);
+        }
+
+        $visit = Visit::find($id);
+
+        if (!$visit) {
+            return $this->error('Visit not found', 404);
+        }
+
+        $file = $request->file('photo');
+
+        $filename = 'visit_' . $visit->id . '.jpg';
+        $storagePath = 'public/visitors';
+
+        // Store file under storage/app/public/visitors/visit_{id}.jpg
+        $file->storeAs($storagePath, $filename);
+
+        $filePath = 'visitors/' . $filename; // relative to storage/app/public
+
+        // Create or update Photo record
+        Photo::updateOrCreate(
+            ['visit_id' => $visit->id],
+            ['file_path' => $filePath]
+        );
+
+        $publicUrl = url('storage/' . ltrim($filePath, '/'));
+
+        return $this->success(['photo_url' => $publicUrl], 'Photo uploaded');
     }
 }

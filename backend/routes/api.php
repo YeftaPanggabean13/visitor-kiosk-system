@@ -19,4 +19,5 @@ Route::middleware([EnsureJsonResponse::class])->group(function () {
     
     // Manual check-out endpoint (no auth)
     Route::post('/visits/{id}/check-out', [VisitController::class, 'checkOut']);
+    Route::post('/visits/{id}/photo', [VisitController::class, 'uploadPhoto']);
 });
