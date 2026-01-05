@@ -37,4 +37,32 @@ class VisitController extends Controller
 
         return $this->success($data);
     }
+
+    public function checkOut($id)
+    {
+        $visit = Visit::find($id);
+
+        if (!$visit) {
+            return $this->error('Visit not found', 404);
+        }
+
+        if ($visit->check_out_at) {
+            return $this->error('Visit already checked out', 400);
+        }
+
+        $visit->check_out_at = now();
+        $visit->save();
+
+        $data = [
+            'visit_id' => $visit->id,
+            'visitor_name' => optional($visit->visitor)->full_name,
+            'host_name' => optional($visit->host)->full_name,
+            'purpose' => $visit->purpose,
+            'check_in_at' => $visit->check_in_at,
+            'check_out_at' => $visit->check_out_at,
+            'photo_url' => $visit->photo ? url('storage/' . ltrim($visit->photo->file_path, '/')) : null,
+        ];
+
+        return $this->success($data, 'Checked out');
+    }
 }

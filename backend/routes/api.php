@@ -16,4 +16,7 @@ Route::middleware([EnsureJsonResponse::class])->group(function () {
     
     // Active visits for security dashboard (read-only, no auth)
     Route::get('/visits/active', [VisitController::class, 'active']);
+    
+    // Manual check-out endpoint (no auth)
+    Route::post('/visits/{id}/check-out', [VisitController::class, 'checkOut']);
 });
