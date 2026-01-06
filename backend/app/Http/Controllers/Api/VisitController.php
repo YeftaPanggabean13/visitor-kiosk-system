@@ -22,7 +22,7 @@ class VisitController extends Controller
     public function active()
     {
         $visits = Visit::with(['visitor', 'host', 'photo'])
-            ->whereNull('check_out_at')
+            ->where('status', 'checked_in')
             ->orderBy('check_in_at', 'desc')
             ->get();
 
@@ -54,6 +54,7 @@ class VisitController extends Controller
         }
 
         $visit->check_out_at = now();
+        $visit->status = 'checked_out';
         $visit->save();
 
         $data = [

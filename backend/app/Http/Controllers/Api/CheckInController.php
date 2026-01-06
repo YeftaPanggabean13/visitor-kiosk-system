@@ -51,7 +51,9 @@ class CheckInController extends Controller
             'host_id' => $host->id,
             'purpose' => $data['purpose'] ?? null,
             'check_in_at' => Carbon::now(),
+            'status' => 'checked_in',
         ]);
+
 
         // Load relations for response
         $visit->load('visitor', 'host');

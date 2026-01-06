@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Visit extends Model
@@ -10,21 +9,24 @@ class Visit extends Model
     protected $fillable = [
         'visitor_id',
         'host_id',
+        'purpose',
         'check_in_at',
         'check_out_at',
-        'purpose',
+        'status',
     ];
 
-    // ✅ RELASI KE VISITOR
     public function visitor()
     {
-        return $this->belongsTo(Visitor::class, 'visitor_id');
+        return $this->belongsTo(Visitor::class);
     }
 
-    // ✅ RELASI KE HOST (USER / HOST TABLE)
     public function host()
     {
-        return $this->belongsTo(Host::class, 'host_id');
-        // ⚠️ jika host adalah User → ganti Host::class jadi User::class
+        return $this->belongsTo(Host::class);
+    }
+
+    public function photo()
+    {
+        return $this->hasOne(Photo::class);
     }
 }

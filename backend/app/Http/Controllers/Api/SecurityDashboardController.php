@@ -12,7 +12,7 @@ class SecurityDashboardController extends Controller
     {
         $today = Carbon::today();
 
-        $visits = Visit::with(['visitor', 'host'])
+        $visits = Visit::with(['visitor', 'host', 'photo'])
             ->orderByDesc('check_in_at')
             ->limit(100)
             ->get();
@@ -23,9 +23,13 @@ class SecurityDashboardController extends Controller
                 'name' => optional($visit->visitor)->full_name,
                 'company' => optional($visit->visitor)->company,
                 'host' => optional($visit->host)->full_name,
+                'purpose' => $visit->purpose,
+                'status' => $visit->status,
                 'check_in_at' => $visit->check_in_at,
                 'check_out_at' => $visit->check_out_at,
-                'status' => $visit->status, 
+                'photo_url' => $visit->photo
+                    ? url('storage/' . ltrim($visit->photo->file_path, '/'))
+                    : null,
             ];
         });
 
@@ -35,7 +39,7 @@ class SecurityDashboardController extends Controller
                 'visitors' => $visitors,
                 'stats' => [
                     'visitors_today' => Visit::whereDate('check_in_at', $today)->count(),
-                    'active_visitors' => Visit::where('status', 'checked_in')->count(), // ✅
+                    'active_visitors' => Visit::where('status', 'checked_in')->count(),
                     'avg_duration_seconds' => $this->averageDuration(),
                 ]
             ]
@@ -44,9 +48,13 @@ class SecurityDashboardController extends Controller
 
     private function averageDuration()
     {
-        $visits = Visit::where('status', 'checked_out')->get(); 
+        $visits = Visit::where('status', 'checked_out')
+            ->whereNotNull('check_out_at')
+            ->get();
 
-        if ($visits->isEmpty()) return 0;
+        if ($visits->isEmpty()) {
+            return 0;
+        }
 
         $totalSeconds = $visits->sum(function ($visit) {
             return Carbon::parse($visit->check_out_at)

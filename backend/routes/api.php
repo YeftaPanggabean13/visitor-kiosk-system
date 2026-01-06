@@ -18,6 +18,7 @@ Route::post('/visits/{id}/photo', [VisitController::class, 'uploadPhoto']);
 });
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/security', [SecurityDashboardController::class, 'index']);
+    Route::post('/visits/{id}/check-out', [VisitController::class, 'checkOut']);
 
 });
 Route::middleware(['auth:sanctum', 'role:admin,security'])->group(function () {
