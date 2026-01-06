@@ -1,30 +1,37 @@
 import { useEffect, useState } from "react";
 import adminApi from "../services/adminApi";
 
-const formatDate = (date) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleString("id-ID", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-};
+const formatDate = (date) =>
+  date
+    ? new Date(date).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })
+    : "-";
 
 export default function AdminDashboard() {
-  const [visits, setVisits] = useState([]);
   const [stats, setStats] = useState(null);
+  const [hosts, setHosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Form untuk tambah host
+  const [newHost, setNewHost] = useState({
+    full_name: "",
+    email: "",
+    department: "",
+  });
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState("");
+
+  // Fetch dashboard dan hosts
   const fetchDashboard = async () => {
     try {
       setLoading(true);
-      const res = await adminApi.getDashboard();
+      const resStats = await adminApi.getDashboard();
+      setStats(resStats.data.data.stats);
 
-      setVisits(res.data.data.visitors || []);
-      console.log("Dashboard :", res.data.data.visitors);
-      setStats(res.data.data.stats || null);
+      const resHosts = await adminApi.getHosts();
+      setHosts(resHosts.data.data);
     } catch (err) {
-      console.error("Dashboard error:", err);
+      console.error(err);
       setError("Gagal memuat dashboard");
     } finally {
       setLoading(false);
@@ -35,109 +42,118 @@ export default function AdminDashboard() {
     fetchDashboard();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading dashboard...
-      </div>
-    );
-  }
+  // Tambah host baru
+  const handleAddHost = async (e) => {
+    e.preventDefault();
+    setAddError("");
 
-  if (error) {
+    if (!newHost.full_name || !newHost.email || !newHost.department) {
+      setAddError("Nama, email, dan department wajib diisi");
+      return;
+    }
+
+    try {
+      setAdding(true);
+      const res = await adminApi.addHost(newHost);
+      setHosts((prev) => [...prev, res.data.data]); // update list host
+      setNewHost({ full_name: "", email: "", department: "" });
+    } catch (err) {
+      console.error(err);
+      setAddError(
+        err.response?.data?.message || "Gagal menambahkan host"
+      );
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    );
+
+  if (error)
     return (
       <div className="min-h-screen flex items-center justify-center text-red-600">
         {error}
       </div>
     );
-  }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Admin Dashboard
-        </h1>
-        <p className="text-gray-500 text-sm">
-          Visitor Management System
-        </p>
-      </div>
+    <div className="p-6 bg-gray-100 min-h-screen space-y-6">
+      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
 
       {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard
-            title="Visitors Today"
-            value={stats.visitors_today}
-          />
-          <StatCard
-            title="Active Visitors"
-            value={stats.active_visitors}
-          />
-          <StatCard
-            title="Avg Duration (sec)"
-            value={stats.avg_duration ?? "-"}
-          />
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <Th>Name</Th>
-              <Th>Company</Th>
-              <Th>Host</Th>
-              <Th>Check-in</Th>
-              <Th>Check-out</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {visits.length === 0 && (
-              <tr>
-                <td
-                  colSpan="5"
-                  className="text-center py-6 text-gray-500"
-                >
-                  No visitor data
-                </td>
-              </tr>
-            )}
-
-            {visits.map((v) => (
-              <tr key={v.id || v.visit_id} className="border-t">
-                <Td>{v.name|| "-"}</Td>
-                <Td>{v.company || "-"}</Td>
-                <Td>{v.host || "-"}</Td>
-                <Td>{formatDate(v.check_in_at)}</Td>
-                <Td>
-                  {v.check_out_at ? formatDate(v.check_out_at) : "—"}
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard title="Visitors Today" value={stats.visitors_today} />
+        <StatCard title="Avg Duration (sec)" value={stats.avg_duration ?? "-"} />
       </div>
+
+      {/* Hosts */}
+      <div className="bg-white rounded-xl shadow p-4 mt-6 space-y-4">
+        <h2 className="text-lg font-semibold">Host Employees</h2>
+
+        {hosts.length === 0 ? (
+          <p>No hosts available</p>
+        ) : (
+          <ul className="space-y-1">
+            {hosts.map((h) => (
+              <li key={h.id}>
+                {h.full_name} — {h.email} — {h.department}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Form Tambah Host */}
+        <form onSubmit={handleAddHost} className="mt-4 space-y-2">
+          <input
+            type="text"
+            placeholder="Nama"
+            className="border rounded p-2 w-full"
+            value={newHost.full_name}
+            onChange={(e) => setNewHost({ ...newHost, full_name: e.target.value })}
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            className="border rounded p-2 w-full"
+            value={newHost.email}
+            onChange={(e) => setNewHost({ ...newHost, email: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="Department"
+            className="border rounded p-2 w-full"
+            value={newHost.department}
+            onChange={(e) => setNewHost({ ...newHost, department: e.target.value })}
+          />
+          {addError && <p className="text-red-600">{addError}</p>}
+          <button
+            type="submit"
+            disabled={adding}
+            className="px-4 py-2 bg-green-600 text-white rounded"
+          >
+            {adding ? "Menambahkan..." : "Tambah Host"}
+          </button>
+        </form>
+      </div>
+
+      {/* Export Button */}
+      <button
+        onClick={() => window.open(adminApi.exportVisits(), "_blank")}
+        className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-xl"
+      >
+        Export Visitor Logs
+      </button>
     </div>
   );
 }
 
-/* ===== Reusable Components ===== */
-
+/* Reusable StatCard */
 const StatCard = ({ title, value }) => (
   <div className="bg-white rounded-xl shadow p-4">
     <p className="text-sm text-gray-500">{title}</p>
     <p className="text-2xl font-bold text-gray-800">{value}</p>
   </div>
-);
-
-const Th = ({ children }) => (
-  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-    {children}
-  </th>
-);
-
-const Td = ({ children }) => (
-  <td className="px-4 py-3 text-gray-700">{children}</td>
 );

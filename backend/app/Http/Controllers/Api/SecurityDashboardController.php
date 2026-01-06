@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Visit;
 use Carbon\Carbon;
 
-class AdminDashboardController extends Controller
+class SecurityDashboardController extends Controller
 {
     public function index()
     {
@@ -27,6 +27,7 @@ class AdminDashboardController extends Controller
                 'check_out_at' => $visit->check_out_at,
             ];
         });
+
         return response()->json([
             'success' => true,
             'data' => [
