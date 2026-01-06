@@ -51,11 +51,17 @@ export default function AdminStatistics() {
 
   if (loading) return <div className="text-center">Loading statistics...</div>;
 
+  const avgSeconds = dashboardUtils.calculateAverageDurationSeconds(visits);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Visitors Today" value={stats?.visitors_today || 0} color="blue" />
-        <StatCard title="Average Visit Duration" value={dashboardUtils.formatDuration(stats?.avg_duration || 0)} color="green" />
+        <StatCard
+            title="Average Visit Duration"
+            value={dashboardUtils.formatDuration(avgSeconds)}
+            color="green"
+        />
         <StatCard title="Active Visits" value={dashboardUtils.getActiveVisitsCount(visits)} max={visits.length || 1} color="blue" />
         <StatCard title="Total Visits" value={visits.length} color="blue" />
       </div>

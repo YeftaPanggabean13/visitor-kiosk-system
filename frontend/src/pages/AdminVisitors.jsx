@@ -28,14 +28,12 @@ export default function AdminVisitors() {
     };
     fetch();
   }, []);
-
   const handleExport = () => {
     // adminApi.exportVisits returns a URL in original code; open it
     window.open(adminApi.exportVisits(), "_blank");
   };
 
   if (loading) return <div>Loading visitor history...</div>;
-
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <div className="flex items-center justify-between mb-4">

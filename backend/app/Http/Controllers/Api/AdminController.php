@@ -12,7 +12,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminController extends Controller
 {
-    // Basic stats dashboard
     public function dashboard()
     {
         $today = Carbon::today();
@@ -35,7 +34,7 @@ class AdminController extends Controller
     }
 
  public function hosts() {
-    $hosts = Host::all(['id', 'full_name', 'email', 'department']); // ambil department juga
+    $hosts = Host::all(['id', 'full_name', 'email', 'department']); 
     return response()->json(['success' => true, 'data' => $hosts]);
 }
 
@@ -43,13 +42,13 @@ public function addHost(Request $request) {
     $request->validate([
         'full_name'  => 'required|string|max:255',
         'email'      => 'required|email|unique:hosts,email',
-        'department' => 'required|string|max:255', // tambahkan validasi department
+        'department' => 'required|string|max:255', 
     ]);
 
     $host = Host::create([
         'full_name'  => $request->full_name,
         'email'      => $request->email,
-        'department' => $request->department, // simpan department
+        'department' => $request->department, 
     ]);
 
     return response()->json(['success' => true, 'data' => $host]);
@@ -85,27 +84,40 @@ public function addHost(Request $request) {
     }
     public function visitsHistory()
     {
-        $visits = Visit::with(['visitor', 'host'])
+        $visits = Visit::with([
+                'visitor:id,full_name,company',
+                'host:id,full_name,department'
+            ])
             ->orderByDesc('check_in_at')
-            ->limit(200)
             ->get()
-            ->map(function ($v) {
+            ->map(function ($visit) {
+
+                $duration = null;
+                if ($visit->check_in_at && $visit->check_out_at) {
+                    $duration = Carbon::parse($visit->check_in_at)
+                        ->diffInSeconds(Carbon::parse($visit->check_out_at));
+                }
+
                 return [
-                    'id' => $v->id,
-                    'visitor' => optional($v->visitor)->full_name,
-                    'company' => optional($v->visitor)->company,
-                    'host' => optional($v->host)->full_name,
-                    'check_in_at' => $v->check_in_at,
-                    'check_out_at' => $v->check_out_at,
-                    'duration' => $v->check_out_at
-                        ? Carbon::parse($v->check_out_at)->diffInMinutes($v->check_in_at)
-                        : null,
+                    'id' => $visit->id,
+                    'visitor' => [
+                        'name' => optional($visit->visitor)->full_name,
+                        'company' => optional($visit->visitor)->company,
+                    ],
+                    'host' => $visit->host ? [
+                        'id' => $visit->host->id,
+                        'name' => $visit->host->full_name,
+                        'department' => $visit->host->department,
+                    ] : null,
+                    'check_in_at' => $visit->check_in_at,
+                    'check_out_at' => $visit->check_out_at,
+                    'duration' => $duration,
                 ];
             });
 
         return response()->json([
             'success' => true,
-            'data' => $visits,
+            'data' => $visits
         ]);
     }
 

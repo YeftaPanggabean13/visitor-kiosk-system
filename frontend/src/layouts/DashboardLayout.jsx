@@ -42,17 +42,6 @@ export default function DashboardLayout() {
           />
 
           <MenuItem
-            to="/admin/visitors"
-            label="Visitors"
-            icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/>
-                <path d="M6 20v-1c0-2.21 3.58-4 6-4s6 1.79 6 4v1"/>
-              </svg>
-            }
-          />
-
-          <MenuItem
             to="/admin/hosts"
             label="Hosts"
             icon={
