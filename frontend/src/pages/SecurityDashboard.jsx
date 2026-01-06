@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import securityApi from "../services/securityApi";
+import { AuthContext } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 /* ================= Helpers ================= */
 
@@ -38,6 +40,8 @@ export default function SecurityDashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [selectedVisit, setSelectedVisit] = useState(null);
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   const fetchDashboard = async () => {
     setLoading(true);
@@ -89,11 +93,27 @@ export default function SecurityDashboard() {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Security Dashboard</h1>
-        <p className="text-sm text-gray-500">
-          Visitor Management System
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Security Dashboard</h1>
+          <p className="text-sm text-gray-500">Visitor Management System</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex flex-col text-right mr-2">
+            <span className="text-sm text-gray-600">Hello</span>
+            <span className="text-sm font-medium text-gray-800">{user?.name || "Security"}</span>
+          </div>
+          <button
+            className="px-3 py-1 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+            onClick={() => {
+              logout?.();
+              navigate("/login");
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter */}
