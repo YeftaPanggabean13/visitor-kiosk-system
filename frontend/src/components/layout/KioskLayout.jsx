@@ -28,7 +28,7 @@ const Layout = ({ children }) => {
               <span className="text-white text-2xl font-black">L</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">LuxeKiosk</h1>
+              <h1 className="text-xl font-bold tracking-tight">Visitor Kiosk</h1>
               <p className="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Enterprise Concierge</p>
             </div>
           </div>
@@ -78,7 +78,7 @@ const Layout = ({ children }) => {
           </div>
         </div>
 
-        <footer className="bg-white/80 backdrop-blur-md border-t border-slate-100 p-6 flex items-center justify-between">
+        {/* <footer className="bg-white/80 backdrop-blur-md border-t border-slate-100 p-6 flex items-center justify-between">
           <div className="flex gap-2">
             <button className="px-5 py-2 rounded-full border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-all uppercase tracking-wider">
               English
@@ -90,7 +90,7 @@ const Layout = ({ children }) => {
           <div className="hidden sm:block text-slate-400 text-[10px] font-bold uppercase tracking-widest">
             Terminal ID: XK-904-B
           </div>
-        </footer>
+        </footer> */}
       </main>
     </div>
   );
