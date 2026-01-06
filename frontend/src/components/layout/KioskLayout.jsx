@@ -72,8 +72,8 @@ const Layout = ({ children }) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-6 lg:p-12 relative">
-          <div className="w-full max-w-2xl animate-slide-up">
+       <div className="flex-1 overflow-y-auto flex flex-col items-center justify-start p-6 lg:p-12 relative">
+          <div className="w-full max-w-2xl animate-slide-up pt-8">
             {children}
           </div>
         </div>

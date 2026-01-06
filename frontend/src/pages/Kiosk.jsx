@@ -21,7 +21,6 @@ export default function Kiosk() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-
   useEffect(() => {
     const restore = async () => {
       const savedVisitId = localStorage.getItem(STORAGE_KEY);
@@ -29,27 +28,24 @@ export default function Kiosk() {
 
       try {
         setLoading(true);
-
         const visit = await getActiveVisit(savedVisitId);
 
-        // Visit already checked out → clean state
         if (!visit || visit.status === "checked_out") {
           localStorage.removeItem(STORAGE_KEY);
           localStorage.removeItem(STORAGE_SNAPSHOT_KEY);
           return;
         }
 
-        // ACTIVE VISIT → LOCK SCREEN
         setVisitId(visit.id);
         setVisitorData({
           fullName: visit.visitor?.full_name || "",
           company: visit.visitor?.company || "",
           phone: visit.visitor?.phone || "",
+          hostName: visit.host?.full_name || "Unknown",
         });
         setPhotoData(visit.photo_url || null);
         setStep("locked");
 
-        // refresh snapshot
         localStorage.setItem(STORAGE_SNAPSHOT_KEY, JSON.stringify(visit));
       } catch (e) {
         console.error("Restore failed", e);
@@ -57,10 +53,8 @@ export default function Kiosk() {
         setLoading(false);
       }
     };
-
     restore();
   }, []);
-
 
   const handleFormSubmit = async (formData) => {
     try {
@@ -81,7 +75,10 @@ export default function Kiosk() {
       localStorage.setItem(STORAGE_SNAPSHOT_KEY, JSON.stringify(visit));
 
       setVisitId(visit.id);
-      setVisitorData(formData);
+      setVisitorData({
+        ...formData,
+        hostName: visit.host?.full_name || "Unknown",
+      });
       setStep("photo");
     } catch (e) {
       setError(e.response?.data?.message || "Check-in failed");
@@ -90,29 +87,20 @@ export default function Kiosk() {
     }
   };
 
-
   const handlePhotoCapture = async (dataUrl) => {
     try {
       setLoading(true);
       setError(null);
 
       const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `visit_${visitId}.jpg`, {
-        type: blob.type,
-      });
+      const file = new File([blob], `visit_${visitId}.jpg`, { type: blob.type });
 
       const res = await uploadVisitPhoto(visitId, file);
 
       setPhotoData(dataUrl);
 
-      // update snapshot
-      const snapshot = JSON.parse(
-        localStorage.getItem(STORAGE_SNAPSHOT_KEY) || "{}"
-      );
-      localStorage.setItem(
-        STORAGE_SNAPSHOT_KEY,
-        JSON.stringify({ ...snapshot, photo_url: res?.photo_url })
-      );
+      const snapshot = JSON.parse(localStorage.getItem(STORAGE_SNAPSHOT_KEY) || "{}");
+      localStorage.setItem(STORAGE_SNAPSHOT_KEY, JSON.stringify({ ...snapshot, photo_url: res?.photo_url }));
 
       setStep("success");
     } catch (e) {
@@ -122,39 +110,35 @@ export default function Kiosk() {
     }
   };
 
+  const handleCheckout = async () => {
+    const storedVisitId = localStorage.getItem(STORAGE_KEY);
+    const id = visitId || storedVisitId;
 
- const handleCheckout = async () => {
-  const storedVisitId = localStorage.getItem("active_visit_id");
-  const id = visitId || storedVisitId;
+    if (!id) {
+      alert("No active visit");
+      return;
+    }
 
-  if (!id) {
-    alert("No active visit");
-    return;
-  }
+    try {
+      setLoading(true);
+      await checkOutVisit(Number(id));
 
-  try {
-    setLoading(true);
-    console.log("Checkout visit:", id);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_SNAPSHOT_KEY);
 
-    await checkOutVisit(Number(id));
+      setVisitId(null);
+      setVisitorData(null);
+      setPhotoData(null);
+      setStep("form");
 
-    localStorage.removeItem("active_visit_id");
-    localStorage.removeItem("active_visit_snapshot");
-
-    setVisitId(null);
-    setVisitorData(null);
-    setPhotoData(null);
-    setStep("form");
-
-    window.location.reload();
-  } catch (e) {
-    console.error(e);
-    alert("Checkout gagal");
-  } finally {
-    setLoading(false);
-  }
-};
-
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      alert("Checkout gagal");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KioskLayout>
@@ -164,24 +148,14 @@ export default function Kiosk() {
         </div>
       )}
 
-      {loading && (
-        <div className="text-center text-lg font-semibold">
-          Processing...
-        </div>
-      )}
+      {loading && <div className="text-center text-lg font-semibold">Processing...</div>}
 
       {/* FORM */}
-      {step === "form" && !visitId && (
-        <VisitorForm onSubmit={handleFormSubmit} />
-      )}
+      {step === "form" && !visitId && <VisitorForm onSubmit={handleFormSubmit} />}
 
       {/* PHOTO */}
       {step === "photo" && visitorData && (
-        <PhotoCapture
-          visitorName={visitorData.fullName}
-          onPhotoCapture={handlePhotoCapture}
-          isSubmitting={loading}
-        />
+        <PhotoCapture visitorName={visitorData.fullName} onPhotoCapture={handlePhotoCapture} isSubmitting={loading} />
       )}
 
       {/* SUCCESS */}
@@ -190,17 +164,11 @@ export default function Kiosk() {
           <h2 className="text-4xl font-bold">Check-In Complete</h2>
           <p className="text-xl">Welcome, {visitorData.fullName}</p>
 
-          <button
-            onClick={() => setStep("badge")}
-            className="w-full py-6 bg-indigo-600 text-white text-xl font-bold rounded-3xl"
-          >
+          <button onClick={() => setStep("badge")} className="w-full py-6 bg-indigo-600 text-white text-xl font-bold rounded-3xl">
             View Badge
           </button>
 
-          <button
-            onClick={handleCheckout}
-            className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl"
-          >
+          <button onClick={handleCheckout} className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl">
             Check Out
           </button>
         </div>
@@ -212,13 +180,11 @@ export default function Kiosk() {
           <BadgePreview
             visitorName={visitorData.fullName}
             company={visitorData.company}
+            hostName={visitorData.hostName}
             visitorPhoto={photoData}
           />
 
-          <button
-            onClick={handleCheckout}
-            className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl"
-          >
+          <button onClick={handleCheckout} className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl">
             Check Out
           </button>
         </div>
@@ -226,18 +192,12 @@ export default function Kiosk() {
 
       {step === "locked" && visitorData && (
         <div className="space-y-6 text-center">
-          <h2 className="text-4xl font-bold text-red-600">
-            Active Visit Detected
-          </h2>
-
+          <h2 className="text-4xl font-bold text-red-600">Active Visit Detected</h2>
           <p className="text-xl">
             Visitor <b>{visitorData.fullName}</b> is still checked in.
           </p>
 
-          <button
-            onClick={handleCheckout}
-            className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl"
-          >
+          <button onClick={handleCheckout} className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl">
             Check Out Visitor
           </button>
         </div>
