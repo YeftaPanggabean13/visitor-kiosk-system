@@ -9,16 +9,14 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Mail\HostNotificationMail;
+use Illuminate\Support\Facades\Mail;
 
 class VisitController extends Controller
 {
     use ApiResponse;
 
-    /**
-     * Return all active visits (check_out_at is NULL) for dashboard.
-     *
-     * GET /api/visits/active
-     */
+    // GET /api/visits/active
     public function active()
     {
         $visits = Visit::with(['visitor', 'host', 'photo'])
@@ -41,17 +39,13 @@ class VisitController extends Controller
         return $this->success($data);
     }
 
+    // Check-out
     public function checkOut($id)
     {
         $visit = Visit::find($id);
 
-        if (!$visit) {
-            return $this->error('Visit not found', 404);
-        }
-
-        if ($visit->check_out_at) {
-            return $this->error('Visit already checked out', 400);
-        }
+        if (!$visit) return $this->error('Visit not found', 404);
+        if ($visit->check_out_at) return $this->error('Visit already checked out', 400);
 
         $visit->check_out_at = now();
         $visit->status = 'checked_out';
@@ -70,6 +64,7 @@ class VisitController extends Controller
         return $this->success($data, 'Checked out');
     }
 
+    // Upload photo for existing visit
     public function uploadPhoto($id, Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -80,36 +75,46 @@ class VisitController extends Controller
             return $this->error($validator->errors()->first(), 422);
         }
 
-        $visit = Visit::find($id);
-
-        if (!$visit) {
-            return $this->error('Visit not found', 404);
-        }
+        $visit = Visit::with('visitor','host','photo')->find($id);
+        if (!$visit) return $this->error('Visit not found', 404);
 
         $file = $request->file('photo');
         $filename = 'visit_' . $visit->id . '.jpg';
-        $directory = 'visitors'; // relative to storage/app/public
+        $directory = 'visitors';
 
         if (!Storage::disk('public')->exists($directory)) {
             Storage::disk('public')->makeDirectory($directory);
         }
 
         Storage::disk('public')->putFileAs($directory, $file, $filename);
-
         $filePath = $directory . '/' . $filename;
 
+        // Simpan foto di tabel Photo
         Photo::updateOrCreate(
             ['visit_id' => $visit->id],
             ['file_path' => $filePath]
         );
 
+        // Update visitor.photo_path juga
+        $visit->visitor->update(['photo_path' => $filePath]);
+
+        // Kirim email ke host
+        try {
+            $visit->load('photo'); // pastikan relasi photo terbaru
+            Mail::to($visit->host->email)->send(new HostNotificationMail($visit));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send host notification email after photo upload: ' . $e->getMessage());
+        }
+
         return $this->success([
             'photo_url' => url('storage/' . $filePath),
-        ], 'Photo uploaded');
+            'message' => 'Photo uploaded and host notified'
+        ]);
     }
+
     public function showActive($id)
     {
-        $visit = Visit::with('visitor', 'host')
+        $visit = Visit::with('visitor', 'host','photo')
             ->where('id', $id)
             ->where('status', 'checked_in')
             ->first();
@@ -124,6 +129,7 @@ class VisitController extends Controller
             'data' => $visit
         ]);
     }
+
     public function kioskCheckOut($id)
     {
         $visit = Visit::where('id', $id)

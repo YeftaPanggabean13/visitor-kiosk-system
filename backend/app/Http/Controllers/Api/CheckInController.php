@@ -10,20 +10,22 @@ use App\Models\Visit;
 use App\Models\Host;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\HostNotificationMail;
 
 class CheckInController extends Controller
 {
     use ApiResponse;
 
-    // Handle a visitor check-in.
     public function __invoke(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'full_name' => ['required', 'string', 'max:255'],
-            'company' => ['nullable', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
-            'host_id' => ['required', 'integer', 'exists:hosts,id'],
-            'purpose' => ['nullable', 'string'],
+            'full_name' => ['required','string','max:255'],
+            'company' => ['nullable','string','max:255'],
+            'phone' => ['required','string','max:50'],
+            'host_id' => ['required','integer','exists:hosts,id'],
+            'purpose' => ['nullable','string'],
+            'photo' => ['nullable','image','max:2048'],
         ]);
 
         if ($validator->fails()) {
@@ -32,20 +34,24 @@ class CheckInController extends Controller
 
         $data = $validator->validated();
 
-        // Create or reuse visitor by phone
+        // Buat atau ambil visitor
         $visitor = Visitor::firstOrCreate(
             ['phone' => $data['phone']],
             ['full_name' => $data['full_name'], 'company' => $data['company'] ?? null]
         );
 
-        // Ensure host exists (validator enforces exists, but double-check)
-        $host = Host::find($data['host_id']);
-
-        if (! $host) {
-            return $this->error('Host not found', 404);
+        // Upload foto jika ada
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('visitors','public');
+            $visitor->photo_path = $photoPath;
+            $visitor->save();
         }
 
-        // Create visit
+        // Pastikan host ada
+        $host = Host::find($data['host_id']);
+        if (!$host) return $this->error('Host not found',404);
+
+        // Buat visit
         $visit = Visit::create([
             'visitor_id' => $visitor->id,
             'host_id' => $host->id,
@@ -54,10 +60,15 @@ class CheckInController extends Controller
             'status' => 'checked_in',
         ]);
 
+        $visit = Visit::with('visitor','host','photo')->find($visit->id);
 
-        // Load relations for response
-        $visit->load('visitor', 'host');
+        // Kirim email ke host
+        try {
+            Mail::to($host->email)->send(new HostNotificationMail($visit));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send host notification email: ' . $e->getMessage());
+        }
 
-        return $this->success($visit, 'Checked in successfully', 201);
+        return $this->success($visit,'Checked in successfully',201);
     }
 }
