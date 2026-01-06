@@ -1,143 +1,182 @@
 import { useEffect, useState } from "react";
 import securityApi from "../services/securityApi";
 
-const formatDate = (date) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleString("id-ID", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-};
 
-export default function SecurityDashboard() {
-  const [visits, setVisits] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleString("id-ID", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  };
 
-  const fetchDashboard = async () => {
-    try {
-      setLoading(true);
-      const res = await securityApi.getDashboard();
-
-      setVisits(res.data.data.visitors || []);
-      console.log("Dashboard :", res.data.data.visitors);
-      setStats(res.data.data.stats || null);
-    } catch (err) {
-      console.error("Dashboard error:", err);
-      setError("Gagal memuat dashboard");
-    } finally {
-      setLoading(false);
+  const formatStatus = (status) => {
+    switch (status) {
+      case "checked_in":
+        return "Check-in";
+      case "checked_out":
+        return "Check-out";
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return "-";
     }
   };
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  const StatusBadge = ({ status }) => {
+    const styles = {
+      checked_in: "bg-green-100 text-green-700",
+      checked_out: "bg-gray-100 text-gray-600",
+      cancelled: "bg-red-100 text-red-700",
+    };
 
-  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading dashboard...
-      </div>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-semibold ${
+          styles[status] || "bg-gray-100 text-gray-500"
+        }`}
+      >
+        {formatStatus(status)}
+      </span>
     );
-  }
+  };
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-red-600">
-        {error}
-      </div>
-    );
-  }
+  export default function SecurityDashboard() {
+    const [visits, setVisits] = useState([]);
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Security Dashboard
-        </h1>
-        <p className="text-gray-500 text-sm">
-          Visitor Management System
-        </p>
-      </div>
+    const fetchDashboard = async () => {
+      try {
+        setLoading(true);
+        const res = await securityApi.getDashboard();
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard
-            title="Visitors Today"
-            value={stats.visitors_today}
-          />
-          <StatCard
-            title="Active Visitors"
-            value={stats.active_visitors}
-          />
-          <StatCard
-            title="Avg Duration (sec)"
-            value={stats.avg_duration ?? "-"}
-          />
+        setVisits(res.data.data.visitors || []);
+        setStats(res.data.data.stats || null);
+      } catch (err) {
+        console.error("Dashboard error:", err);
+        setError("Gagal memuat dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      fetchDashboard();
+    }, []);
+
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          Loading dashboard...
         </div>
-      )}
+      );
+    }
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <Th>Name</Th>
-              <Th>Company</Th>
-              <Th>Host</Th>
-              <Th>Check-in</Th>
-              <Th>Check-out</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {visits.length === 0 && (
+    if (error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center text-red-600">
+          {error}
+        </div>
+      );
+    }
+
+
+    return (
+      <div className="min-h-screen bg-gray-100 p-6">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">
+            Security Dashboard
+          </h1>
+          <p className="text-gray-500 text-sm">
+            Visitor Management System
+          </p>
+        </div>
+
+        {/* Stats */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <StatCard
+              title="Visitors Today"
+              value={stats.visitors_today}
+            />
+            <StatCard
+              title="Active Visitors"
+              value={stats.active_visitors}
+            />
+            <StatCard
+              title="Avg Duration (sec)"
+              value={stats.avg_duration_seconds ?? "-"}
+            />
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="bg-white rounded-xl shadow overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
               <tr>
-                <td
-                  colSpan="5"
-                  className="text-center py-6 text-gray-500"
-                >
-                  No visitor data
-                </td>
+                <Th>Name</Th>
+                <Th>Company</Th>
+                <Th>Host</Th>
+                <Th>Status</Th>
+                <Th>Check-in</Th>
+                <Th>Check-out</Th>
               </tr>
-            )}
+            </thead>
+            <tbody>
+              {visits.length === 0 && (
+                <tr>
+                  <td
+                    colSpan="6"
+                    className="text-center py-6 text-gray-500"
+                  >
+                    No visitor data
+                  </td>
+                </tr>
+              )}
 
-            {visits.map((v) => (
-              <tr key={v.id || v.visit_id} className="border-t">
-                <Td>{v.name|| "-"}</Td>
-                <Td>{v.company || "-"}</Td>
-                <Td>{v.host || "-"}</Td>
-                <Td>{formatDate(v.check_in_at)}</Td>
-                <Td>
-                  {v.check_out_at ? formatDate(v.check_out_at) : "—"}
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              {visits.map((v) => (
+                <tr key={v.id} className="border-t">
+                  <Td>{v.name || "-"}</Td>
+                  <Td>{v.company || "-"}</Td>
+                  <Td>{v.host || "-"}</Td>
+                  <Td>
+                    <StatusBadge status={v.status} />
+                  </Td>
+                  <Td>{formatDate(v.check_in_at)}</Td>
+                  <Td>
+                    {v.check_out_at
+                      ? formatDate(v.check_out_at)
+                      : "—"}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+    );
+  }
+
+
+  const StatCard = ({ title, value }) => (
+    <div className="bg-white rounded-xl shadow p-4">
+      <p className="text-sm text-gray-500">{title}</p>
+      <p className="text-2xl font-bold text-gray-800">{value}</p>
     </div>
   );
-}
 
-/* ===== Reusable Components ===== */
+  const Th = ({ children }) => (
+    <th className="text-left px-4 py-3 font-semibold text-gray-600">
+      {children}
+    </th>
+  );
 
-const StatCard = ({ title, value }) => (
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-sm text-gray-500">{title}</p>
-    <p className="text-2xl font-bold text-gray-800">{value}</p>
-  </div>
-);
-
-const Th = ({ children }) => (
-  <th className="text-left px-4 py-3 font-semibold text-gray-600">
-    {children}
-  </th>
-);
-
-const Td = ({ children }) => (
-  <td className="px-4 py-3 text-gray-700">{children}</td>
+  const Td = ({ children }) => (
+    <td className="px-4 py-3 text-gray-700">
+      {children}
+    </td>
 );

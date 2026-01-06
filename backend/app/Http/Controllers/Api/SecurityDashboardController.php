@@ -25,6 +25,7 @@ class SecurityDashboardController extends Controller
                 'host' => optional($visit->host)->full_name,
                 'check_in_at' => $visit->check_in_at,
                 'check_out_at' => $visit->check_out_at,
+                'status' => $visit->status, 
             ];
         });
 
@@ -34,7 +35,7 @@ class SecurityDashboardController extends Controller
                 'visitors' => $visitors,
                 'stats' => [
                     'visitors_today' => Visit::whereDate('check_in_at', $today)->count(),
-                    'active_visitors' => Visit::whereNull('check_out_at')->count(),
+                    'active_visitors' => Visit::where('status', 'checked_in')->count(), // ✅
                     'avg_duration_seconds' => $this->averageDuration(),
                 ]
             ]
@@ -43,7 +44,7 @@ class SecurityDashboardController extends Controller
 
     private function averageDuration()
     {
-        $visits = Visit::whereNotNull('check_out_at')->get();
+        $visits = Visit::where('status', 'checked_out')->get(); 
 
         if ($visits->isEmpty()) return 0;
 
