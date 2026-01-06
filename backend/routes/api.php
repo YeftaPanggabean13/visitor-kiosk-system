@@ -28,6 +28,7 @@ Route::middleware(['auth:sanctum', 'role:admin,security'])->group(function () {
 
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/admin', [AdminController::class, 'dashboard']);
+    Route::get('/admin/visits', [AdminController::class, 'visitsHistory']);
     Route::get('/admin/hosts', [AdminController::class, 'hosts']);
     Route::post('/admin/hosts', [AdminController::class, 'addHost']);
     Route::get('/admin/visits/export', [AdminController::class, 'exportVisits']);

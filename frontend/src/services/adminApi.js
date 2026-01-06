@@ -16,6 +16,9 @@ const adminApi = {
   exportVisits() {
     return "/admin/visits/export";
   },
+    getVisits() {
+    return api.get("/admin/visits");
+  },
 };
 
 export default adminApi;

@@ -83,4 +83,30 @@ public function addHost(Request $request) {
 
         return response()->stream($callback, 200, $headers);
     }
+    public function visitsHistory()
+    {
+        $visits = Visit::with(['visitor', 'host'])
+            ->orderByDesc('check_in_at')
+            ->limit(200)
+            ->get()
+            ->map(function ($v) {
+                return [
+                    'id' => $v->id,
+                    'visitor' => optional($v->visitor)->full_name,
+                    'company' => optional($v->visitor)->company,
+                    'host' => optional($v->host)->full_name,
+                    'check_in_at' => $v->check_in_at,
+                    'check_out_at' => $v->check_out_at,
+                    'duration' => $v->check_out_at
+                        ? Carbon::parse($v->check_out_at)->diffInMinutes($v->check_in_at)
+                        : null,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $visits,
+        ]);
+    }
+
 }
