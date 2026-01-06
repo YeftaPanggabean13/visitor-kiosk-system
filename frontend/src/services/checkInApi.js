@@ -69,12 +69,10 @@ export const fetchActiveVisits = async () => {
  * Check out a visitor.
  * @param {number} visitId - The visit ID
  */
-export const checkOutVisit  = async (visitId) => {
-  try {
-    const response = await api.post(`/visits/${visitId}/check-out`);
-    return response.data.data;
-  } catch (error) {
-    console.error("Check-out failed:", error);
-    throw error;
-  }
+export const kioskCheckOutVisit = async (visitId) => {
+  const res = await api.post(`/kiosk/visits/${visitId}/check-out`);
+  return res.data.data;
 };
+
+export const getActiveVisit = (visitId) =>
+  api.get(`/visits/${visitId}`).then(res => res.data.data);

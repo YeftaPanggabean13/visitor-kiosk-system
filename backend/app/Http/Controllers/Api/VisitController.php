@@ -107,4 +107,41 @@ class VisitController extends Controller
             'photo_url' => url('storage/' . $filePath),
         ], 'Photo uploaded');
     }
+    public function showActive($id)
+    {
+        $visit = Visit::with('visitor', 'host')
+            ->where('id', $id)
+            ->where('status', 'checked_in')
+            ->first();
+
+        if (! $visit) {
+            return response()->json([
+                'message' => 'Active visit not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => $visit
+        ]);
+    }
+    public function kioskCheckOut($id)
+    {
+        $visit = Visit::where('id', $id)
+            ->where('status', 'checked_in')
+            ->first();
+
+        if (! $visit) {
+            return $this->error('Active visit not found', 404);
+        }
+
+        $visit->update([
+            'status' => 'checked_out',
+            'check_out_at' => now(),
+        ]);
+
+        return $this->success([
+            'visit_id' => $visit->id,
+            'check_out_at' => $visit->check_out_at,
+        ], 'Checked out successfully');
+    }
 }
