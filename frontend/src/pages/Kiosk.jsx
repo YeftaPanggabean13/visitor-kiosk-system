@@ -21,6 +21,7 @@ export default function Kiosk() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  /** RESTORE ACTIVE VISIT */
   useEffect(() => {
     const restore = async () => {
       const savedVisitId = localStorage.getItem(STORAGE_KEY);
@@ -43,6 +44,7 @@ export default function Kiosk() {
           phone: visit.visitor?.phone || "",
           hostName: visit.host?.full_name || "Unknown",
         });
+
         setPhotoData(visit.photo_url || null);
         setStep("locked");
 
@@ -56,6 +58,7 @@ export default function Kiosk() {
     restore();
   }, []);
 
+  /** SUBMIT FORM */
   const handleFormSubmit = async (formData) => {
     try {
       setLoading(true);
@@ -79,6 +82,7 @@ export default function Kiosk() {
         ...formData,
         hostName: visit.host?.full_name || "Unknown",
       });
+
       setStep("photo");
     } catch (e) {
       setError(e.response?.data?.message || "Check-in failed");
@@ -87,20 +91,26 @@ export default function Kiosk() {
     }
   };
 
+  /** AFTER USER CONFIRM PHOTO */
   const handlePhotoCapture = async (dataUrl) => {
     try {
       setLoading(true);
       setError(null);
 
-      const blob = await (await fetch(dataUrl)).blob();
+      // Convert dataURL to file
+      const blob = await fetch(dataUrl).then((r) => r.blob());
       const file = new File([blob], `visit_${visitId}.jpg`, { type: blob.type });
 
       const res = await uploadVisitPhoto(visitId, file);
 
+      // Store ONLY after successful upload
       setPhotoData(dataUrl);
 
       const snapshot = JSON.parse(localStorage.getItem(STORAGE_SNAPSHOT_KEY) || "{}");
-      localStorage.setItem(STORAGE_SNAPSHOT_KEY, JSON.stringify({ ...snapshot, photo_url: res?.photo_url }));
+      localStorage.setItem(
+        STORAGE_SNAPSHOT_KEY,
+        JSON.stringify({ ...snapshot, photo_url: res?.photo_url })
+      );
 
       setStep("success");
     } catch (e) {
@@ -110,18 +120,18 @@ export default function Kiosk() {
     }
   };
 
+  /** CHECKOUT */
   const handleCheckout = async () => {
-    const storedVisitId = localStorage.getItem(STORAGE_KEY);
-    const id = visitId || storedVisitId;
+    const savedId = visitId || localStorage.getItem(STORAGE_KEY);
 
-    if (!id) {
+    if (!savedId) {
       alert("No active visit");
       return;
     }
 
     try {
       setLoading(true);
-      await checkOutVisit(Number(id));
+      await checkOutVisit(Number(savedId));
 
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_SNAPSHOT_KEY);
@@ -150,31 +160,36 @@ export default function Kiosk() {
 
       {loading && <div className="text-center text-lg font-semibold">Processing...</div>}
 
-      {/* FORM */}
       {step === "form" && !visitId && <VisitorForm onSubmit={handleFormSubmit} />}
 
-      {/* PHOTO */}
       {step === "photo" && visitorData && (
-        <PhotoCapture visitorName={visitorData.fullName} onPhotoCapture={handlePhotoCapture} isSubmitting={loading} />
+        <PhotoCapture
+          visitorName={visitorData.fullName}
+          onPhotoCapture={handlePhotoCapture}
+        />
       )}
 
-      {/* SUCCESS */}
       {step === "success" && visitorData && (
         <div className="space-y-8 text-center">
           <h2 className="text-4xl font-bold">Check-In Complete</h2>
           <p className="text-xl">Welcome, {visitorData.fullName}</p>
 
-          <button onClick={() => setStep("badge")} className="w-full py-6 bg-indigo-600 text-white text-xl font-bold rounded-3xl">
+          <button
+            onClick={() => setStep("badge")}
+            className="w-full py-6 bg-indigo-600 text-white text-xl font-bold rounded-3xl"
+          >
             View Badge
           </button>
 
-          <button onClick={handleCheckout} className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl">
+          <button
+            onClick={handleCheckout}
+            className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl"
+          >
             Check Out
           </button>
         </div>
       )}
 
-      {/* BADGE */}
       {step === "badge" && visitorData && photoData && (
         <div className="space-y-6">
           <BadgePreview
@@ -184,7 +199,10 @@ export default function Kiosk() {
             visitorPhoto={photoData}
           />
 
-          <button onClick={handleCheckout} className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl">
+          <button
+            onClick={handleCheckout}
+            className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl"
+          >
             Check Out
           </button>
         </div>
@@ -197,7 +215,10 @@ export default function Kiosk() {
             Visitor <b>{visitorData.fullName}</b> is still checked in.
           </p>
 
-          <button onClick={handleCheckout} className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl">
+          <button
+            onClick={handleCheckout}
+            className="w-full py-6 bg-red-600 text-white text-xl font-bold rounded-3xl"
+          >
             Check Out Visitor
           </button>
         </div>
