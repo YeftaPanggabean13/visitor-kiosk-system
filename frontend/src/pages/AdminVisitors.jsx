@@ -3,12 +3,22 @@ import adminApi from "../services/adminApi";
 import { dashboardUtils } from "../utils/dashboardUtils";
 
 const Th = ({ children }) => (
-  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">{children}</th>
+  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+    {children}
+  </th>
 );
-const Td = ({ children }) => <td className="px-3 py-2 text-sm text-gray-800">{children}</td>;
+
+const Td = ({ children }) => (
+  <td className="px-3 py-2 text-sm text-gray-800">{children}</td>
+);
 
 const formatDate = (date) =>
-  date ? new Date(date).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-";
+  date
+    ? new Date(date).toLocaleString("id-ID", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : "-";
 
 export default function AdminVisitors() {
   const [visits, setVisits] = useState([]);
@@ -28,17 +38,25 @@ export default function AdminVisitors() {
     };
     fetch();
   }, []);
+
   const handleExport = () => {
-    // adminApi.exportVisits returns a URL in original code; open it
     window.open(adminApi.exportVisits(), "_blank");
   };
 
   if (loading) return <div>Loading visitor history...</div>;
+
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Visitor History</h2>
-        <button onClick={handleExport} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">Export (CSV)</button>
+        <h2 className="text-xl font-semibold text-gray-900">
+          Visitor History
+        </h2>
+        <button
+          onClick={handleExport}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+        >
+          Export (CSV)
+        </button>
       </div>
 
       {visits.length === 0 ? (
@@ -59,9 +77,9 @@ export default function AdminVisitors() {
             <tbody>
               {visits.map((v) => (
                 <tr key={v.id} className="border-t hover:bg-gray-50">
-                  <Td>{v.visitor}</Td>
-                  <Td>{v.company}</Td>
-                  <Td>{v.host}</Td>
+                  <Td>{v.visitor?.name || "-"}</Td>
+                  <Td>{v.visitor?.company || "-"}</Td>
+                  <Td>{v.host?.name || "-"}</Td>
                   <Td>{formatDate(v.check_in_at)}</Td>
                   <Td>{formatDate(v.check_out_at)}</Td>
                   <Td>

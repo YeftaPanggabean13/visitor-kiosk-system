@@ -309,7 +309,7 @@ export const TopDepartmentsChart = ({ visits, hosts }) => {
   // Count visits by department
   const deptCounts = {};
   visits.forEach((visit) => {
-    const dept = hostDeptMap[visit.host_id] || "Unknown";
+    const dept = visit.host?.department || "Unknown";
     deptCounts[dept] = (deptCounts[dept] || 0) + 1;
   });
 
